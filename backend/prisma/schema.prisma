@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and access control
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+// Battery inventory management
+model Battery {
+  id           String   @id @default(uuid())
+  serialNumber String   @unique
+  price        Decimal  @db.Decimal(10, 2)
+  dateAdded    DateTime @default(now())
+  status       Status   @default(AVAILABLE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rentals      Rental[]
+
+  @@map("batteries")
+}
+
+enum Status {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+}
+
+// Customer management
+model Customer {
+  id           String   @id @default(uuid())
+  name         String
+  phoneNumber  String   @unique
+  address      String
+  creditRating Int      @default(3) // 0-5 star rating
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  rentals      Rental[]
+  payments     Payment[]
+
+  @@map("customers")
+}
+
+// Rental tracking
+model Rental {
+  id         String    @id @default(uuid())
+  batteryId  String
+  customerId String
+  rentDate   DateTime  @default(now())
+  returnDate DateTime?
+  rentalPrice Decimal  @db.Decimal(10, 2)
+  isPaid     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  battery    Battery   @relation(fields: [batteryId], references: [id])
+  customer   Customer  @relation(fields: [customerId], references: [id])
+  payments   Payment[]
+
+  @@map("rentals")
+}
+
+// Payment tracking
+model Payment {
+  id         String   @id @default(uuid())
+  rentalId   String
+  customerId String
+  amount     Decimal  @db.Decimal(10, 2)
+  paymentDate DateTime @default(now())
+  paymentMethod PaymentMethod
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  rental     Rental   @relation(fields: [rentalId], references: [id])
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
